@@ -131,6 +131,24 @@ var cacheTestCases = []cacheTestCase{
 		},
 		shouldCache: true,
 	},
+	{
+		RecursionAvailable: true, Authoritative: false,
+		Case: test.Case{
+			Qname: "www.example.org.", Qtype: dns.TypeA,
+			Ns: []dns.RR{
+				test.NS("example.org.		3600	IN	NS	a.iana-servers.net."),
+				test.NS("example.org.		3600	IN	NS	b.iana-servers.net."),
+			},
+		},
+		in: test.Case{
+			Qname: "www.example.org.", Qtype: dns.TypeA,
+			Ns: []dns.RR{
+				test.NS("example.org.		3600	IN	NS	a.iana-servers.net."),
+				test.NS("example.org.		3600	IN	NS	b.iana-servers.net."),
+			},
+		},
+		shouldCache: true,
+	},
 }
 
 func cacheMsg(m *dns.Msg, tc cacheTestCase) *dns.Msg {
@@ -185,7 +203,7 @@ func TestCache(t *testing.T) {
 			resp := i.toMsg(m, time.Now().UTC())
 
 			if err := test.Header(tc.Case, resp); err != nil {
-				t.Error(err)
+				t.Errorf("Test %s, %d: %s", tc.Case.Qname, tc.Case.Qtype, err)
 				continue
 			}
 

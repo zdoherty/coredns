@@ -34,10 +34,10 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 		if c.prefetch > 0 {
 			ttl := i.ttl(now)
-			i.Freq.Update(c.duration, now)
+			i.m().Freq.Update(c.duration, now)
 
-			threshold := int(math.Ceil(float64(c.percentage) / 100 * float64(i.origTTL)))
-			if i.Freq.Hits() >= c.prefetch && ttl <= threshold {
+			threshold := int(math.Ceil(float64(c.percentage) / 100 * float64(i.m().origTTL)))
+			if i.m().Freq.Hits() >= c.prefetch && ttl <= threshold {
 				cw := newPrefetchResponseWriter(server, state, c)
 				go func(w dns.ResponseWriter) {
 					cachePrefetches.WithLabelValues(server).Inc()
@@ -47,7 +47,7 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 					// that we've gathered sofar. See we copy the frequencies info back
 					// into the new item that was stored in the cache.
 					if i1 := c.exists(state); i1 != nil {
-						i1.Freq.Reset(now, i.Freq.Hits())
+						i1.m().Freq.Reset(now, i.m().Freq.Hits())
 					}
 				}(cw)
 			}
@@ -62,29 +62,29 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 // Name implements the Handler interface.
 func (c *Cache) Name() string { return "cache" }
 
-func (c *Cache) get(now time.Time, state request.Request, server string) (*item, bool) {
+func (c *Cache) get(now time.Time, state request.Request, server string) (cacher, bool) {
 	k := hash(state.Name(), state.QType(), state.Do())
 
-	if i, ok := c.ncache.Get(k); ok && i.(*item).ttl(now) > 0 {
+	if i, ok := c.ncache.Get(k); ok && i.(cacher).ttl(now) > 0 {
 		cacheHits.WithLabelValues(server, Denial).Inc()
-		return i.(*item), true
+		return i.(cacher), true
 	}
 
-	if i, ok := c.pcache.Get(k); ok && i.(*item).ttl(now) > 0 {
+	if i, ok := c.pcache.Get(k); ok && i.(cacher).ttl(now) > 0 {
 		cacheHits.WithLabelValues(server, Success).Inc()
-		return i.(*item), true
+		return i.(cacher), true
 	}
 	cacheMisses.WithLabelValues(server).Inc()
 	return nil, false
 }
 
-func (c *Cache) exists(state request.Request) *item {
+func (c *Cache) exists(state request.Request) cacher {
 	k := hash(state.Name(), state.QType(), state.Do())
 	if i, ok := c.ncache.Get(k); ok {
-		return i.(*item)
+		return i.(cacher)
 	}
 	if i, ok := c.pcache.Get(k); ok {
-		return i.(*item)
+		return i.(cacher)
 	}
 	return nil
 }

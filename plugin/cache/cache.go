@@ -199,19 +199,26 @@ func (w *ResponseWriter) WriteMsg(res *dns.Msg) error {
 }
 
 func (w *ResponseWriter) set(m *dns.Msg, key uint64, mt response.Type, duration time.Duration) {
-	// duration is expected > 0
-	// and key is valid
+	// duration is expected > 0 and key to be valid
 	switch mt {
-	case response.NoError, response.Delegation:
-		i := newItem(m, w.now(), duration)
+	case response.NoError:
+		i := &noErrorItem{}
+		i.fromMsg(m, w.now(), duration)
+		w.pcache.Add(key, i)
+
+	case response.Delegation:
+		i := &delegationItem{}
+		i.fromMsg(m, w.now(), duration)
 		w.pcache.Add(key, i)
 
 	case response.NameError, response.NoData:
-		i := newItem(m, w.now(), duration)
+		i := &nameErrorItem{}
+		i.fromMsg(m, w.now(), duration)
 		w.ncache.Add(key, i)
 
 	case response.OtherError:
 		// don't cache these
+
 	default:
 		log.Warningf("Caching called with unknown classification: %d", mt)
 	}
