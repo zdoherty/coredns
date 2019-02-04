@@ -44,6 +44,7 @@ func BackendMemoryHandler() plugin.Handler {
 		// uppercase letter return NXDOMAIN
 		if byte(owner[0]) >= 65 && byte(owner[0]) < 90 {
 			m.Ns = []dns.RR{test.SOA("example.org IN SOA 1 2 3 4 5 5")}
+			m.Rcode = dns.RcodeNameError
 			w.WriteMsg(m)
 			return dns.RcodeSuccess, nil
 		}
