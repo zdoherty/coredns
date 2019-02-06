@@ -17,7 +17,7 @@ health [ADDRESS]
 ~~~
 
 Optionally takes an address; the default is `:8080`. The health path is fixed to `/health`. The
-health endpoint returns a 200 response code and the word "OK" when this server is healthy. It returns
+health endpoint returns a 200 response code and the word "OK" when this server is healthy. If unhealthy, it returns
 a 503. *health* periodically (1s) polls plugins that exports health information. If any of the
 plugins signals that it is unhealthy, the server will go unhealthy too. Each plugin that supports
 health checks has a section "Health" in their README.
