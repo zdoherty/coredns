@@ -17,7 +17,7 @@ func TestDebug(t *testing.T) {
 		t.Errorf("Expected no debug logs, got %s", x)
 	}
 
-	D = true
+	D.Set()
 	Debug("debug")
 	if x := f.String(); !strings.Contains(x, debug+"debug") {
 		t.Errorf("Expected debug log to be %s, got %s", debug+"debug", x)
@@ -28,7 +28,7 @@ func TestDebugx(t *testing.T) {
 	var f bytes.Buffer
 	golog.SetOutput(&f)
 
-	D = true
+	D.Set()
 
 	Debugf("%s", "debug")
 	if x := f.String(); !strings.Contains(x, debug+"debug") {
