@@ -125,7 +125,6 @@ func (s *Server) Serve(l net.Listener) error {
 			s.ServeDNS(ctx, w, r)
 		})}
 	} else {
-		println("enabling canceling, becuase not loaded")
 		s.server[tcp] = &dns.Server{Listener: l, Net: "tcp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
 			ctx := context.WithValue(context.Background(), Key{}, s)
 			ctx, cancel := context.WithTimeout(ctx, 5001*time.Millisecond)
