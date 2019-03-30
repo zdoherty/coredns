@@ -1,0 +1,40 @@
+name: "coredns"
+arch: "amd64"
+platform: "linux"
+version: "v${MY_APP_VERSION}"
+section: "default"
+priority: "extra"
+replaces:
+- foobar
+provides:
+- bar
+depends:
+- ca-certificates
+- adduser
+suggests:
+- dnsutils
+maintainer: "CoreDNS Maintainers <info@coredns.io>"
+description: |
+  DNS server that chains plugins, written in Go.
+vendor: "CoreDNS"
+homepage: "https://coredns.io"
+license: "MIT"
+bindir: "/usr/bin"
+files:
+  ./coredns: "/usr/bin/coredns"
+config_files:
+  "/dev/null": "/etc/coredns/Corefile"
+  "man/*.7": "/usr/share/man/man7/"
+  "man/coredns.1": "/usr/share/man/man1/coredns.1"
+  "man/corefile.5": "/usr/share/man/man5/corefile.5"
+  "coredns.service": "/lib/systemd/system/coredns.service"
+
+overrides:
+  #rpm:
+    #scripts:
+    #  preinstall: ./scripts/preinstall.sh
+    #  postremove: ./scripts/postremove.sh
+  deb:
+    scripts:
+      postinstall: ./coredns.postinst
+      #preremove: ./scripts/preremove.sh
