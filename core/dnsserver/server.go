@@ -39,6 +39,7 @@ type Server struct {
 	trace       trace.Trace        // the trace plugin for the server
 	debug       bool               // disable recover()
 	classChaos  bool               // allow non-INET class queries
+	cancel      bool               // is the cancel plugin loaded in this server, if not use a default
 }
 
 // NewServer returns a new CoreDNS server and compiles all plugins in to it. By default CH class
@@ -89,6 +90,10 @@ func NewServer(addr string, group []*Config) (*Server, error) {
 			// register the *handler* also
 			site.registerHandler(stack)
 
+			if stack.Name() == "cancel" {
+				s.cancel = true
+			}
+
 			if s.trace == nil && stack.Name() == "trace" {
 				// we have to stash away the plugin, not the
 				// Tracer object, because the Tracer won't be initialized yet
@@ -111,10 +116,24 @@ func NewServer(addr string, group []*Config) (*Server, error) {
 // This implements caddy.TCPServer interface.
 func (s *Server) Serve(l net.Listener) error {
 	s.m.Lock()
-	s.server[tcp] = &dns.Server{Listener: l, Net: "tcp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
-		ctx := context.WithValue(context.Background(), Key{}, s)
-		s.ServeDNS(ctx, w, r)
-	})}
+
+	// If cancel is loaded we use that plugin, otherwise we'll add the a context with a timeout here.
+	// We can't neatly just load the cancel plugin, because of cyclic imports.
+	if s.cancel {
+		s.server[tcp] = &dns.Server{Listener: l, Net: "tcp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
+			ctx := context.WithValue(context.Background(), Key{}, s)
+			s.ServeDNS(ctx, w, r)
+		})}
+	} else {
+		println("enabling canceling, becuase not loaded")
+		s.server[tcp] = &dns.Server{Listener: l, Net: "tcp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
+			ctx := context.WithValue(context.Background(), Key{}, s)
+			ctx, cancel := context.WithTimeout(ctx, 5001*time.Millisecond)
+			s.ServeDNS(ctx, w, r)
+			cancel()
+		})}
+	}
+
 	s.m.Unlock()
 
 	return s.server[tcp].ActivateAndServe()
@@ -124,10 +143,23 @@ func (s *Server) Serve(l net.Listener) error {
 // This implements caddy.UDPServer interface.
 func (s *Server) ServePacket(p net.PacketConn) error {
 	s.m.Lock()
-	s.server[udp] = &dns.Server{PacketConn: p, Net: "udp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
-		ctx := context.WithValue(context.Background(), Key{}, s)
-		s.ServeDNS(ctx, w, r)
-	})}
+
+	// If cancel is loaded we use that plugin, otherwise we'll add the a context with a timeout here.
+	// We can't neatly just load the cancel plugin, because of cyclic imports.
+	if s.cancel {
+		s.server[udp] = &dns.Server{PacketConn: p, Net: "udp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
+			ctx := context.WithValue(context.Background(), Key{}, s)
+			s.ServeDNS(ctx, w, r)
+		})}
+	} else {
+		s.server[udp] = &dns.Server{PacketConn: p, Net: "udp", Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
+			ctx := context.WithValue(context.Background(), Key{}, s)
+			ctx, cancel := context.WithTimeout(ctx, 5001*time.Millisecond)
+			s.ServeDNS(ctx, w, r)
+			cancel()
+		})}
+	}
+
 	s.m.Unlock()
 
 	return s.server[udp].ActivateAndServe()

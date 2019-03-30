@@ -82,6 +82,10 @@ func (f *Forward) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg
 			fails = 0
 		}
 
+		if plugin.Done(ctx) {
+			return dns.RcodeSuccess, plugin.Error(f.Name(), ctx.Err())
+		}
+
 		proxy := list[i]
 		i++
 		if proxy.Down(f.maxfails) {

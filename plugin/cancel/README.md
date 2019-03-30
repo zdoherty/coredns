@@ -7,7 +7,7 @@
 ## Description
 
 The *cancel* plugin creates a canceling context for each request. It adds a timeout that gets
-triggered after 5001 milliseconds.
+triggered after 5001 milliseconds. This plugin is loaded by *default*.
 
 The 5001 number is chosen because the default timeout for DNS clients is 5 seconds, after that they
 give up.
