@@ -34,7 +34,7 @@ And a update on two important and active bugs:
 * the [*pprof*](/plugins/pprof) adds a `block` option that enables the block profiling.
 * the [*prometheus*](/plugins/metrics)  adds a `coredns_plugin_enabled` metric that shows which plugins are enabled.
 * the [*chaos*](/plugins/chaos) returns the maintainers when queried for "authors.bind TXT CH".
-* the `resync` in the [*kubernetes*](/plugins/kubernetes) is disabled by default and will be removed
+* the `resync` in the [*kubernetes*](/plugins/kubernetes) is deprecated and disabled by default. It will be removed
   in future versions.
 
 ## Brought to You By
