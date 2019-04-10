@@ -44,7 +44,6 @@ func setup(c *caddy.Controller, f func(*credentials.Credentials) route53iface.Ro
 	// With that said, even though a user doesn't define any credentials in
 	// Corefile, we should still attempt to read the default credentials file,
 	// ~/.aws/credentials with the default profile.
-	sharedProvider := &credentials.SharedCredentialsProvider{}
 	var providers []credentials.Provider
 	var fall fall.F
 
@@ -85,6 +84,7 @@ func setup(c *caddy.Controller, f func(*credentials.Credentials) route53iface.Ro
 			case "upstream":
 				c.RemainingArgs() // eats args
 			case "credentials":
+				sharedProvider := &credentials.SharedCredentialsProvider{}
 				if c.NextArg() {
 					sharedProvider.Profile = c.Val()
 				} else {
@@ -93,6 +93,7 @@ func setup(c *caddy.Controller, f func(*credentials.Credentials) route53iface.Ro
 				if c.NextArg() {
 					sharedProvider.Filename = c.Val()
 				}
+				providers = append(providers, sharedProvider)
 			case "fallthrough":
 				fall.SetZonesFromArgs(c.RemainingArgs())
 			default:
@@ -100,9 +101,12 @@ func setup(c *caddy.Controller, f func(*credentials.Credentials) route53iface.Ro
 			}
 		}
 	}
-	providers = append(providers, &credentials.EnvProvider{}, sharedProvider)
 
-	client := f(credentials.NewChainCredentials(providers))
+	client := f(nil)
+	if len(providers) > 0 {
+		client = f(credentials.NewChainCredentials(providers))
+	}
+
 	ctx := context.Background()
 	h, err := New(ctx, client, keys, up)
 	if err != nil {
